@@ -1,0 +1,56 @@
+public ActionResult ProductDetail(String slug)
+        {
+            //??
+            var model = db.Products
+                .Where(m => m.Slug == slug && m.Status == 1)
+                .First();
+            int catid = model.CateID;
+
+            var recentlyViews = (List<MProduct>)Session["RecentlyViewedProducts"];
+            MProduct pDelete = null;
+            foreach (MProduct p in recentlyViews)
+            {
+                if (p.ID.Equals(model.ID))
+                {
+                    pDelete = p;
+                    break;
+                }
+            }
+
+            recentlyViews.Remove(pDelete);
+            recentlyViews.Insert(0, model);
+            List<int> listcatid = new List<int>();
+            listcatid.Add(catid);
+
+            var list2 = db.Categorys
+                .Where(m => m.ParentId == catid)
+                .Select(m => m.Id)
+                .ToList();
+            foreach (var id2 in list2)
+            {
+                listcatid.Add(id2);
+                var list3 = db.Categorys
+                    .Where(m => m.ParentId == id2)
+                    .Select(m => m.Id)
+                    .ToList();
+                foreach (var id3 in list3)
+                {
+                    listcatid.Add(id3);
+                }
+            }
+            // danh mục cùng sản phẩm
+            ViewBag.listother = db.Products
+                .Where(m => m.Status == 1 && listcatid
+                .Contains(m.CateID) && m.ID != model.ID)
+                .OrderByDescending(m => m.Created_at)
+                .Take(12)
+                .ToList();
+            // sản phẩm mới nhập
+            ViewBag.news = db.Products
+                .Where(m => m.Status == 1 /*&& listcatid.Contains(m.CatId)*/ && m.ID != model.ID)
+                .OrderByDescending(m => m.Created_at).Take(4).ToList();
+
+            ViewBag.Rates = db.Rates.Where(m => m.ProductID == model.ID);
+
+            return View("ProductDetail", model);
+        }
